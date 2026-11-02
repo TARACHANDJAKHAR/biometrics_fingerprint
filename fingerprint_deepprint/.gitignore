@@ -1,0 +1,57 @@
+# ==========================================
+# Strict .gitignore: Only Code and Notebooks
+# ==========================================
+
+# --- Datasets ---
+dataset/
+data/
+*.zip
+*.tar.gz
+
+# --- Slides, PDFs & Documents ---
+*.pdf
+*.pptx
+*.ppt
+*.html
+*.htm
+presentation_slides.html
+presentation.pptx
+
+# --- Model Checkpoints & Weights ---
+checkpoints/
+models/
+*.pth
+*.pt
+*.ckpt
+*.bin
+*.onnx
+
+# --- Results, Plots & Benchmark Figures ---
+results/
+plots/
+*.png
+*.jpg
+*.jpeg
+*.svg
+
+# --- Python & Jupyter Caches ---
+__pycache__/
+*.py[cod]
+*$py.class
+.ipynb_checkpoints/
+
+# --- Virtual Environments & IDEs ---
+venv/
+.venv/
+env/
+.vscode/
+.idea/
+.DS_Store
+*.log
+
+# --- Whitelist: Keep Code & Notebooks ---
+!requirements.txt
+!README.md
+!*.py
+!*.ipynb
+
