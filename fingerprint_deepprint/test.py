@@ -48,7 +48,7 @@ import torch
 from torch.utils.data import DataLoader
 from PIL import Image
 
-from src.model import DeepPrintResNet, DeepPrintMobileNet
+from src.model import DeepPrintResNet, DeepPrintMobileNet, DeepPrintPaperDualBranchModel, load_deepprint_model
 from src.preprocessing import FingerprintPreprocessor
 from src.dataset import SOCOFingDataset, FVC2004Dataset
 from src.embeddings import EmbeddingExtractor, compress_embedding, decompress_embedding
@@ -483,7 +483,7 @@ def generate_html_dashboard(
         """)
     chart_cards_html = "\n".join(chart_cards)
 
-    html_content = f"""<!DOCTYPE html>
+    html_content = rf"""<!DOCTYPE html>
 <html lang="en">
 <head>
     <meta charset="UTF-8">
@@ -759,9 +759,10 @@ def main():
     parser = argparse.ArgumentParser(description="DeepPrint Multi-Dataset Testing Suite")
     parser.add_argument("--data_dir", type=str, default="data/archive/SOCOFing",
                         help="Path to SOCOFing root folder (containing Real and Altered)")
-    parser.add_argument("--checkpoint", type=str, default="models/deepprint_resnet50.pth",
+    default_ckpt = "models/deepprint_paper_dual_branch.pth" if os.path.exists("models/deepprint_paper_dual_branch.pth") else "models/deepprint_resnet50.pth"
+    parser.add_argument("--checkpoint", type=str, default=default_ckpt,
                         help="Path to trained model checkpoint")
-    parser.add_argument("--results_dir", type=str, default="results",
+    parser.add_argument("--results_dir", type=str, default="frontend",
                         help="Directory to save generated charts and dashboard")
     parser.add_argument("--num_test_subjects", type=int, default=15,
                         help="Number of held-out test subjects (default: 15 for fast benchmarking, 0 for all)")
@@ -785,15 +786,10 @@ def main():
         print(f"[!] Error: Checkpoint {args.checkpoint} does not exist!", flush=True)
         sys.exit(1)
 
-    ckpt = torch.load(args.checkpoint, map_location="cpu")
-    num_classes = ckpt.get("num_classes", 700)
-    embedding_dim = ckpt.get("embedding_dim", 192)
-
-    model = DeepPrintResNet(num_classes=num_classes, embedding_dim=embedding_dim, pretrained=False)
-    model.load_state_dict(ckpt["model_state_dict"])
-    model.to(device)
-    model.eval()
-    print(f"[*] Model loaded successfully! (Classes: {num_classes}, Embedding Dim: {embedding_dim})", flush=True)
+    model, model_info = load_deepprint_model(args.checkpoint, device)
+    num_classes = model_info["num_classes"]
+    embedding_dim = model_info["embedding_dim"]
+    print(f"[*] Loaded model: {model_info['model_name']} (Classes: {num_classes}, Embedding Dim: {embedding_dim})", flush=True)
 
     # 2. Identify Held-Out Open-Set Test Subjects
     test_subjects = find_held_out_subjects(
