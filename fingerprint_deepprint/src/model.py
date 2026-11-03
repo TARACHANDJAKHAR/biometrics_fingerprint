@@ -9,7 +9,7 @@ import torch
 import torch.nn as nn
 import torch.nn.functional as F
 import torchvision.models as models
-from typing import Optional
+from typing import Optional, Tuple
 
 
 class DeepPrintResNet(nn.Module):
@@ -179,4 +179,210 @@ class DeepPrintMobileNet(nn.Module):
         embeddings = self.extract_features(x)
         logits = self.classifier(embeddings)
         return logits, embeddings
+
+
+class SpatialTransformerNetwork(nn.Module):
+    """
+    Shallow Localization Network & Bilinear Grid Sampler (Table 3 in DeepPrint paper).
+    Learns canonical fingerprint alignment end-to-end without reference points.
+    """
+    def __init__(self):
+        super().__init__()
+        # Localization CNN (Table 3 in paper)
+        self.localization = nn.Sequential(
+            nn.Conv2d(3, 16, kernel_size=5, stride=2, padding=2),
+            nn.BatchNorm2d(16),
+            nn.ReLU(True),
+            nn.MaxPool2d(2, 2),
+            nn.Conv2d(16, 32, kernel_size=5, stride=2, padding=2),
+            nn.BatchNorm2d(32),
+            nn.ReLU(True),
+            nn.MaxPool2d(2, 2),
+            nn.Conv2d(32, 64, kernel_size=3, stride=2, padding=1),
+            nn.BatchNorm2d(64),
+            nn.ReLU(True),
+            nn.AdaptiveAvgPool2d((4, 4))
+        )
+        self.fc_loc = nn.Sequential(
+            nn.Linear(64 * 4 * 4, 64),
+            nn.ReLU(True),
+            nn.Linear(64, 6)  # 2x3 affine matrix parameters
+        )
+        # Initialize affine matrix to identity transform: [[1, 0, 0], [0, 1, 0]]
+        self.fc_loc[2].weight.data.zero_()
+        self.fc_loc[2].bias.data.copy_(torch.tensor([1, 0, 0, 0, 1, 0], dtype=torch.float))
+
+    def forward(self, x: torch.Tensor) -> torch.Tensor:
+        xs = self.localization(x)
+        xs = xs.view(xs.size(0), -1)
+        theta = self.fc_loc(xs).view(-1, 2, 3)
+        grid = F.affine_grid(theta, x.size(), align_corners=False)
+        x_aligned = F.grid_sample(x, grid, align_corners=False)
+        return x_aligned
+
+
+class MinutiaeDecoderHead(nn.Module):
+    """
+    Convolutional Decoder reconstructing the 6-channel minutiae orientation heatmap
+    (Section 3.4 'Side-Task Minutiae Map Estimation').
+    """
+    def __init__(self, in_channels: int = 512, out_channels: int = 6):
+        super().__init__()
+        self.decoder = nn.Sequential(
+            nn.ConvTranspose2d(in_channels, 128, kernel_size=4, stride=2, padding=1),  # 7x7 -> 14x14
+            nn.BatchNorm2d(128),
+            nn.ReLU(True),
+            nn.ConvTranspose2d(128, 64, kernel_size=4, stride=2, padding=1),           # 14x14 -> 28x28
+            nn.BatchNorm2d(64),
+            nn.ReLU(True),
+            nn.ConvTranspose2d(64, 32, kernel_size=4, stride=2, padding=0),            # 28x28 -> 58x58
+            nn.BatchNorm2d(32),
+            nn.ReLU(True),
+            nn.Conv2d(32, out_channels, kernel_size=3, stride=1, padding=1),
+            nn.AdaptiveAvgPool2d((64, 64)),                                             # Matches target 64x64
+            nn.Sigmoid()
+        )
+
+    def forward(self, feat_map: torch.Tensor) -> torch.Tensor:
+        return self.decoder(feat_map)
+
+
+class DeepPrintPaperDualBranchModel(nn.Module):
+    """
+    Complete DeepPrint Architecture from IEEE TPAMI 2021:
+    - STN Alignment Module
+    - Shared Stem
+    - Dual Branches (96-d Texture + 96-d Minutiae)
+    - Minutiae Map Decoder Head (6-channel heatmap)
+    - L2-Normalized 192-d Fixed-Length Fingerprint Representation
+    """
+    def __init__(self, num_classes: int, embedding_dim: int = 192, pretrained: bool = True):
+        super().__init__()
+        assert embedding_dim == 192, "DeepPrint paper specifies 192-dim representation (96 tex + 96 min)"
+        self.num_classes = num_classes
+
+        # 1. Spatial Transformer Network
+        self.stn = SpatialTransformerNetwork()
+
+        # 2. Fast Residual Base Model (ResNet-18 chosen for rapid CPU/GPU training)
+        weights = models.ResNet18_Weights.DEFAULT if pretrained else None
+        base_tex = models.resnet18(weights=weights)
+        base_min = models.resnet18(weights=weights)
+
+        # Shared convolutional stem
+        self.shared_stem = nn.Sequential(
+            base_tex.conv1,
+            base_tex.bn1,
+            base_tex.relu,
+            base_tex.maxpool,
+            base_tex.layer1
+        )
+
+        # 3. Texture Branch (Extracts ridge patterns & frequency)
+        self.tex_layer2 = base_tex.layer2
+        self.tex_layer3 = base_tex.layer3
+        self.tex_layer4 = base_tex.layer4
+        self.tex_gap = nn.AdaptiveAvgPool2d((1, 1))
+        self.tex_fc = nn.Linear(512, 96, bias=False)
+        self.tex_bn = nn.BatchNorm1d(96)
+        self.tex_classifier = nn.Linear(96, num_classes)
+
+        # 4. Minutiae Branch (Guides features via minutiae heatmap decoder)
+        self.min_layer2 = base_min.layer2
+        self.min_layer3 = base_min.layer3
+        self.min_layer4 = base_min.layer4
+        self.min_gap = nn.AdaptiveAvgPool2d((1, 1))
+        self.min_fc = nn.Linear(512, 96, bias=False)
+        self.min_bn = nn.BatchNorm1d(96)
+        self.min_classifier = nn.Linear(96, num_classes)
+
+        # Minutiae Heatmap Decoder
+        self.minutiae_decoder = MinutiaeDecoderHead(in_channels=512, out_channels=6)
+
+    def extract_features(self, x: torch.Tensor) -> torch.Tensor:
+        """Extracts the fixed-length 192-d representation R in S^191 (unit hypersphere)."""
+        # 1. Align via STN
+        x_aligned = self.stn(x)
+
+        # 2. Shared Stem
+        stem_feat = self.shared_stem(x_aligned)
+
+        # 3. Texture Branch -> 96-d
+        t = self.tex_layer2(stem_feat)
+        t = self.tex_layer3(t)
+        t = self.tex_layer4(t)
+        t_pool = self.tex_gap(t).flatten(1)
+        r_tex = F.normalize(self.tex_bn(self.tex_fc(t_pool)), p=2, dim=1)
+
+        # 4. Minutiae Branch -> 96-d
+        m = self.min_layer2(stem_feat)
+        m = self.min_layer3(m)
+        m = self.min_layer4(m)
+        m_pool = self.min_gap(m).flatten(1)
+        r_min = F.normalize(self.min_bn(self.min_fc(m_pool)), p=2, dim=1)
+
+        # 5. Concatenate to 192-d and project to unit hypersphere
+        r_combined = torch.cat([r_min, r_tex], dim=1)
+        r_final = F.normalize(r_combined, p=2, dim=1)
+        return r_final
+
+    def forward(self, x: torch.Tensor) -> Tuple[torch.Tensor, torch.Tensor, torch.Tensor, torch.Tensor]:
+        """Forward pass during multi-task training."""
+        x_aligned = self.stn(x)
+        stem_feat = self.shared_stem(x_aligned)
+
+        # Texture Branch
+        t = self.tex_layer2(stem_feat)
+        t = self.tex_layer3(t)
+        t = self.tex_layer4(t)
+        t_pool = self.tex_gap(t).flatten(1)
+        r_tex = F.normalize(self.tex_bn(self.tex_fc(t_pool)), p=2, dim=1)
+        logits_tex = self.tex_classifier(r_tex)
+
+        # Minutiae Branch
+        m = self.min_layer2(stem_feat)
+        m = self.min_layer3(m)
+        m = self.min_layer4(m)
+        m_pool = self.min_gap(m).flatten(1)
+        r_min = F.normalize(self.min_bn(self.min_fc(m_pool)), p=2, dim=1)
+        logits_min = self.min_classifier(r_min)
+
+        # Side-Task Minutiae Heatmap Prediction
+        predicted_heatmap = self.minutiae_decoder(m)
+
+        # 192-d Normalized Embedding
+        embeddings = F.normalize(torch.cat([r_min, r_tex], dim=1), p=2, dim=1)
+        return logits_tex, logits_min, predicted_heatmap, embeddings
+
+
+def load_deepprint_model(checkpoint_path: str, device: torch.device) -> Tuple[nn.Module, dict]:
+    """
+    Intelligently inspects and loads either DeepPrintResNet, DeepPrintMobileNet,
+    or DeepPrintPaperDualBranchModel according to checkpoint state dict metadata.
+    """
+    ckpt = torch.load(checkpoint_path, map_location="cpu")
+    num_classes = ckpt.get("num_classes", 700)
+    embedding_dim = ckpt.get("embedding_dim", 192)
+    state = ckpt.get("model_state_dict", ckpt)
+    arch = ckpt.get("architecture", "")
+
+    if "stn.localization.0.weight" in state or "DeepPrintPaperDualBranch" in arch:
+        model = DeepPrintPaperDualBranchModel(num_classes=num_classes, embedding_dim=embedding_dim, pretrained=False)
+        model_name = "DeepPrint Paper Dual-Branch (ResNet Backbone + STN + Minutiae Decoder)"
+    elif "features.0.0.weight" in state:
+        model = DeepPrintMobileNet(num_classes=num_classes, embedding_dim=embedding_dim, pretrained=False)
+        model_name = "DeepPrint MobileNetV3"
+    else:
+        model = DeepPrintResNet(num_classes=num_classes, embedding_dim=embedding_dim, pretrained=False)
+        model_name = "DeepPrint ResNet-50 Baseline"
+
+    model.load_state_dict(state)
+    model.to(device)
+    model.eval()
+    return model, {
+        "model_name": model_name,
+        "num_classes": num_classes,
+        "embedding_dim": embedding_dim,
+        "checkpoint_path": checkpoint_path
+    }
 

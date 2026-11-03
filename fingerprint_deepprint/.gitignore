@@ -54,4 +54,8 @@ env/
 !README.md
 !*.py
 !*.ipynb
+!index.html
+!frontend/**
+!presentation.pdf
+!presentation.pptx
 

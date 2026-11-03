@@ -1,0 +1,574 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>DeepPrint: Fixed-Length Fingerprint Recognition Dashboard</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script>
+        tailwind.config = {
+            theme: {
+                extend: {
+                    colors: {
+                        'surface-bg': '#0f172a',
+                        'surface-card': '#1e293b',
+                        'surface-elevated': '#334155',
+                        'primary': '#38bdf8',
+                        'accent': '#f59e0b',
+                        'success': '#10b981',
+                        'warning': '#f43f5e',
+                        'border': '#334155',
+                        'text-muted': '#94a3b8'
+                    }
+                }
+            }
+        }
+    </script>
+    <style>
+        body { background-color: #0f172a; color: #f8fafc; font-family: system-ui, -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif; }
+        .badge { padding: 2px 8px; border-radius: 9999px; font-size: 0.75rem; font-weight: 600; text-transform: uppercase; }
+        .badge-success { background-color: rgba(16, 185, 129, 0.2); color: #34d399; border: 1px solid rgba(16, 185, 129, 0.4); }
+        .badge-danger { background-color: rgba(244, 63, 94, 0.2); color: #fb7185; border: 1px solid rgba(244, 63, 94, 0.4); }
+        table { border-collapse: separate; border-spacing: 0; width: 100%; }
+        th { background-color: #1e293b; color: #94a3b8; font-weight: 600; text-transform: uppercase; font-size: 0.7rem; letter-spacing: 0.05em; padding: 10px 14px; text-align: left; border-bottom: 2px solid #334155; }
+        td { padding: 12px 14px; font-size: 0.85rem; border-bottom: 1px solid #334155; }
+        tr:hover td { background-color: rgba(51, 65, 85, 0.5); }
+    </style>
+</head>
+<body class="min-h-screen pb-16">
+
+    <!-- Top Navigation Bar -->
+    <header class="bg-surface-card border-b border-border sticky top-0 z-50 shadow-lg">
+        <div class="max-w-7xl mx-auto px-4 py-3 flex flex-wrap justify-between items-center gap-4">
+            <div class="flex items-center space-x-3">
+                <div class="w-9 h-9 rounded-lg bg-gradient-to-br from-primary to-blue-600 flex items-center justify-center font-bold text-black shadow">
+                    DP
+                </div>
+                <div>
+                    <h1 class="text-base font-bold tracking-tight">DeepPrint: Fixed-Length Fingerprint Recognition</h1>
+                    <p class="text-xs text-text-muted">Biometric Performance & Verification Dashboard &bull; Open-Set Evaluation</p>
+                </div>
+            </div>
+            <div class="flex items-center space-x-3 text-xs">
+                <span class="inline-flex items-center px-2.5 py-1 rounded-full bg-blue-900/40 text-primary border border-primary/30">
+                    <span class="w-2 h-2 rounded-full bg-primary animate-pulse mr-1.5"></span>
+                    Model: ResNet-50 (192-d)
+                </span>
+                <span class="inline-flex items-center px-2.5 py-1 rounded-full bg-emerald-900/40 text-success border border-success/30">
+                    Compressed: 200 Bytes
+                </span>
+            </div>
+        </div>
+    </header>
+
+    <main class="max-w-7xl mx-auto px-4 mt-6 space-y-8">
+
+        <!-- Research Paper Reference Banner -->
+        <div class="bg-gradient-to-r from-blue-950/60 to-slate-900 border border-blue-800/40 p-5 rounded-2xl shadow-md">
+            <div class="flex flex-col md:flex-row justify-between items-start md:items-center gap-3">
+                <div>
+                    <span class="badge bg-primary/20 text-primary border border-primary/40 mb-2 inline-block">IEEE TPAMI Benchmark</span>
+                    <h2 class="text-lg font-bold text-white">"Learning a Fixed-Length Fingerprint Representation"</h2>
+                    <p class="text-xs text-text-muted mt-1">
+                        <em>Joshua J. Engelsma, Kai Cao, Anil K. Jain</em> &bull; IEEE Transactions on Pattern Analysis and Machine Intelligence (TPAMI), Vol. 43, No. 6, June 2021.
+                    </p>
+                </div>
+                <div class="text-xs text-right text-text-muted space-y-1">
+                    <div>Protocol: <strong class="text-slate-200">Subject-Independent Open-Set</strong></div>
+                    <div>Comparison: <strong class="text-slate-200">Cosine Dot Product \(O(d)\)</strong></div>
+                    <div>Storage: <strong class="text-slate-200">200 Bytes / Template</strong></div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Key Stats Metrics Row -->
+        <div class="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-6 gap-4">
+            <div class="bg-surface-card p-4 rounded-xl border border-border shadow">
+                <p class="text-xs text-text-muted uppercase tracking-wider">Rank-1 Accuracy</p>
+                <h3 class="text-2xl font-extrabold text-success mt-1">100.00%</h3>
+                <p class="text-xs text-text-muted mt-0.5">Top-1 identification</p>
+            </div>
+            <div class="bg-surface-card p-4 rounded-xl border border-border shadow">
+                <p class="text-xs text-text-muted uppercase tracking-wider">Hit Rate @ PR=1%</p>
+                <h3 class="text-2xl font-extrabold text-primary mt-1">100.00%</h3>
+                <p class="text-xs text-text-muted mt-0.5">Top 1% candidate list</p>
+            </div>
+            <div class="bg-surface-card p-4 rounded-xl border border-border shadow">
+                <p class="text-xs text-text-muted uppercase tracking-wider">TAR @ FAR=0.1%</p>
+                <h3 class="text-2xl font-extrabold text-accent mt-1">97.33%</h3>
+                <p class="text-xs text-text-muted mt-0.5">At 10<sup>-3</sup> false accepts</p>
+            </div>
+            <div class="bg-surface-card p-4 rounded-xl border border-border shadow">
+                <p class="text-xs text-text-muted uppercase tracking-wider">Equal Error Rate</p>
+                <h3 class="text-2xl font-extrabold text-warning mt-1">0.40%</h3>
+                <p class="text-xs text-text-muted mt-0.5">EER operating point</p>
+            </div>
+            <div class="bg-surface-card p-4 rounded-xl border border-border shadow">
+                <p class="text-xs text-text-muted uppercase tracking-wider">Template Size</p>
+                <h3 class="text-2xl font-extrabold text-slate-100 mt-1">200 B</h3>
+                <p class="text-xs text-emerald-400 mt-0.5">&darr; 74% compression</p>
+            </div>
+            <div class="bg-surface-card p-4 rounded-xl border border-border shadow">
+                <p class="text-xs text-text-muted uppercase tracking-wider">1:1 Match Time</p>
+                <h3 class="text-2xl font-extrabold text-sky-400 mt-1">1.60 &mu;s</h3>
+                <p class="text-xs text-text-muted mt-0.5">Microsecond speed</p>
+            </div>
+        </div>
+
+        <!-- Comprehensive Multi-Dataset Benchmark Table -->
+        <section class="bg-surface-card rounded-2xl border border-border overflow-hidden shadow-lg">
+            <div class="p-5 border-b border-border flex justify-between items-center flex-wrap gap-2">
+                <div>
+                    <h3 class="font-bold text-base text-white">Multi-Dataset & Alteration Benchmark Comparison</h3>
+                    <p class="text-xs text-text-muted mt-0.5">Evaluated across alteration severities and compressed representations on held-out test subjects</p>
+                </div>
+                <span class="text-xs text-text-muted bg-surface-elevated px-3 py-1 rounded-lg border border-border">
+                    Gallery: 150 Pristine Impressions
+                </span>
+            </div>
+            <div class="overflow-x-auto">
+                <table>
+                    <thead>
+                        <tr>
+                            <th>Benchmark Condition</th>
+                            <th>Gallery (N)</th>
+                            <th>Probes (M)</th>
+                            <th>Rank-1</th>
+                            <th>Rank-5</th>
+                            <th>HR @ PR=1%</th>
+                            <th>TAR @ 0.1% FAR</th>
+                            <th>TAR @ 0.01% FAR</th>
+                            <th>EER</th>
+                            <th>d' Separation</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        
+        <tr>
+            <td class="font-semibold text-primary">SOCOFing Altered-Easy</td>
+            <td>150</td>
+            <td>450</td>
+            <td class="text-success font-bold">100.00%</td>
+            <td>100.00%</td>
+            <td class="text-primary font-bold">100.00%</td>
+            <td class="text-accent font-bold">97.33%</td>
+            <td>88.00%</td>
+            <td class="text-warning font-bold">0.40%</td>
+            <td>4.34</td>
+        </tr>
+        
+
+        <tr>
+            <td class="font-semibold text-primary">SOCOFing Altered-Medium</td>
+            <td>150</td>
+            <td>434</td>
+            <td class="text-success font-bold">96.08%</td>
+            <td>99.31%</td>
+            <td class="text-primary font-bold">97.70%</td>
+            <td class="text-accent font-bold">78.57%</td>
+            <td>48.62%</td>
+            <td class="text-warning font-bold">2.56%</td>
+            <td>3.75</td>
+        </tr>
+        
+
+        <tr>
+            <td class="font-semibold text-primary">SOCOFing Altered-Hard</td>
+            <td>150</td>
+            <td>366</td>
+            <td class="text-success font-bold">83.33%</td>
+            <td>94.54%</td>
+            <td class="text-primary font-bold">88.52%</td>
+            <td class="text-accent font-bold">50.00%</td>
+            <td>24.86%</td>
+            <td class="text-warning font-bold">4.65%</td>
+            <td>3.29</td>
+        </tr>
+        
+
+        <tr>
+            <td class="font-semibold text-primary">SOCOFing Combined</td>
+            <td>150</td>
+            <td>1250</td>
+            <td class="text-success font-bold">93.76%</td>
+            <td>98.16%</td>
+            <td class="text-primary font-bold">95.84%</td>
+            <td class="text-accent font-bold">75.36%</td>
+            <td>52.80%</td>
+            <td class="text-warning font-bold">3.40%</td>
+            <td>3.69</td>
+        </tr>
+        
+
+        <tr>
+            <td class="font-semibold text-primary">Compressed (200 Bytes)</td>
+            <td>150</td>
+            <td>1250</td>
+            <td class="text-success font-bold">93.76%</td>
+            <td>98.08%</td>
+            <td class="text-primary font-bold">95.84%</td>
+            <td class="text-accent font-bold">75.36%</td>
+            <td>52.80%</td>
+            <td class="text-warning font-bold">3.40%</td>
+            <td>3.69</td>
+        </tr>
+        
+                    </tbody>
+                </table>
+            </div>
+        </section>
+
+        <!-- Alteration Category Robustness & Template Compression -->
+        <div class="grid grid-cols-1 lg:grid-cols-2 gap-6">
+
+            <!-- Alteration Category Breakdown -->
+            <section class="bg-surface-card rounded-2xl border border-border p-5 shadow-lg">
+                <h3 class="font-bold text-base text-white mb-1">Robustness by Alteration Category</h3>
+                <p class="text-xs text-text-muted mb-4">Assessing performance resilience against specific synthetic distortions</p>
+                <div class="overflow-x-auto">
+                    <table>
+                        <thead>
+                            <tr>
+                                <th>Distortion Type</th>
+                                <th>Probes</th>
+                                <th>Rank-1</th>
+                                <th>TAR @ 0.1% FAR</th>
+                                <th>EER</th>
+                                <th>Threshold</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            
+        <tr>
+            <td class="font-semibold">CR</td>
+            <td>420</td>
+            <td class="text-success font-bold">85.95%</td>
+            <td class="text-accent font-bold">60.48%</td>
+            <td class="text-warning font-bold">5.14%</td>
+            <td>0.5143</td>
+        </tr>
+        
+
+        <tr>
+            <td class="font-semibold">Obl</td>
+            <td>450</td>
+            <td class="text-success font-bold">97.56%</td>
+            <td class="text-accent font-bold">80.44%</td>
+            <td class="text-warning font-bold">2.17%</td>
+            <td>0.5777</td>
+        </tr>
+        
+
+        <tr>
+            <td class="font-semibold">Zcut</td>
+            <td>380</td>
+            <td class="text-success font-bold">97.89%</td>
+            <td class="text-accent font-bold">81.32%</td>
+            <td class="text-warning font-bold">1.83%</td>
+            <td>0.6041</td>
+        </tr>
+        
+                        </tbody>
+                    </table>
+                </div>
+            </section>
+
+            <!-- Template Compression Specs (Section 3.5) -->
+            <section class="bg-surface-card rounded-2xl border border-border p-5 shadow-lg flex flex-col justify-between">
+                <div>
+                    <div class="flex justify-between items-center mb-1">
+                        <h3 class="font-bold text-base text-white">Section 3.5 Template Compression</h3>
+                        <span class="badge badge-success">Exact 200 Bytes</span>
+                    </div>
+                    <p class="text-xs text-text-muted mb-4">Min-max 8-bit quantization with 64-bit scalar metadata</p>
+                    <div class="grid grid-cols-2 gap-3 text-xs mb-4">
+                        <div class="bg-surface-elevated p-3 rounded-lg border border-border">
+                            <span class="text-text-muted">Uncompressed Template:</span>
+                            <div class="text-base font-bold text-white mt-1">768 Bytes</div>
+                            <span class="text-text-muted text-[10px]">192 float32 values</span>
+                        </div>
+                        <div class="bg-surface-elevated p-3 rounded-lg border border-border">
+                            <span class="text-text-muted">Compressed Template:</span>
+                            <div class="text-base font-bold text-emerald-400 mt-1">200 Bytes</div>
+                            <span class="text-text-muted text-[10px]">192 uint8 + 8B floats</span>
+                        </div>
+                        <div class="bg-surface-elevated p-3 rounded-lg border border-border">
+                            <span class="text-text-muted">Reconstruction MAE:</span>
+                            <div class="text-base font-bold text-sky-400 mt-1">0.000361</div>
+                            <span class="text-text-muted text-[10px]">Mean absolute difference</span>
+                        </div>
+                        <div class="bg-surface-elevated p-3 rounded-lg border border-border">
+                            <span class="text-text-muted">Cosine Correlation:</span>
+                            <div class="text-base font-bold text-accent mt-1">0.999983</div>
+                            <span class="text-text-muted text-[10px]">Dot product fidelity</span>
+                        </div>
+                    </div>
+                </div>
+                <div class="bg-surface-elevated/70 p-3 rounded-lg border border-border/80 text-xs text-text-muted">
+                    <strong class="text-slate-200">Mathematical Formula:</strong>
+                    <div class="font-mono text-[11px] text-sky-300 mt-1">
+                        R'_i = round( 255 &times; (R_i - min(R)) / (max(R) - min(R)) )
+                    </div>
+                </div>
+            </section>
+        </div>
+
+        <!-- Generated Plots & Visualization Gallery -->
+        <section class="space-y-4">
+            <div>
+                <h3 class="font-bold text-lg text-white">Biometric Evaluation Visualizations</h3>
+                <p class="text-xs text-text-muted">ROC, CMC, score separation histograms, and cross-condition comparisons</p>
+            </div>
+            <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-5">
+                
+        <div class="card bg-surface-card rounded-xl border border-border overflow-hidden shadow-md hover:border-primary transition">
+            <div class="p-3 bg-surface-elevated border-b border-border flex justify-between items-center">
+                <h4 class="font-semibold text-sm">Overlaid ROC Curves (All Benchmarks)</h4>
+                <a href="comparison_roc.png" target="_blank" class="text-xs text-primary hover:underline">View Full &rarr;</a>
+            </div>
+            <a href="comparison_roc.png" target="_blank">
+                <img src="comparison_roc.png" alt="Overlaid ROC Curves (All Benchmarks)" class="w-full h-56 object-cover bg-black" loading="lazy" />
+            </a>
+            <div class="p-3 text-xs text-text-muted">
+                Semi-log plot of TAR vs FAR across Easy, Medium, Hard, Combined, and Compressed.
+            </div>
+        </div>
+        
+
+        <div class="card bg-surface-card rounded-xl border border-border overflow-hidden shadow-md hover:border-primary transition">
+            <div class="p-3 bg-surface-elevated border-b border-border flex justify-between items-center">
+                <h4 class="font-semibold text-sm">Overlaid CMC Curves (All Benchmarks)</h4>
+                <a href="comparison_cmc.png" target="_blank" class="text-xs text-primary hover:underline">View Full &rarr;</a>
+            </div>
+            <a href="comparison_cmc.png" target="_blank">
+                <img src="comparison_cmc.png" alt="Overlaid CMC Curves (All Benchmarks)" class="w-full h-56 object-cover bg-black" loading="lazy" />
+            </a>
+            <div class="p-3 text-xs text-text-muted">
+                Cumulative Match Characteristic showing Rank-k identification up to Rank 20.
+            </div>
+        </div>
+        
+
+        <div class="card bg-surface-card rounded-xl border border-border overflow-hidden shadow-md hover:border-primary transition">
+            <div class="p-3 bg-surface-elevated border-b border-border flex justify-between items-center">
+                <h4 class="font-semibold text-sm">Robustness by Distortion Type</h4>
+                <a href="alteration_type_analysis.png" target="_blank" class="text-xs text-primary hover:underline">View Full &rarr;</a>
+            </div>
+            <a href="alteration_type_analysis.png" target="_blank">
+                <img src="alteration_type_analysis.png" alt="Robustness by Distortion Type" class="w-full h-56 object-cover bg-black" loading="lazy" />
+            </a>
+            <div class="p-3 text-xs text-text-muted">
+                Comparison of Rank-1 and TAR@FAR=0.1% across Central Rotation, Obliteration, and Z-cut.
+            </div>
+        </div>
+        
+
+        <div class="card bg-surface-card rounded-xl border border-border overflow-hidden shadow-md hover:border-primary transition">
+            <div class="p-3 bg-surface-elevated border-b border-border flex justify-between items-center">
+                <h4 class="font-semibold text-sm">200-Byte Template Fidelity</h4>
+                <a href="compression_fidelity.png" target="_blank" class="text-xs text-primary hover:underline">View Full &rarr;</a>
+            </div>
+            <a href="compression_fidelity.png" target="_blank">
+                <img src="compression_fidelity.png" alt="200-Byte Template Fidelity" class="w-full h-56 object-cover bg-black" loading="lazy" />
+            </a>
+            <div class="p-3 text-xs text-text-muted">
+                Reconstruction error distribution and correlation of min-max quantization (Section 3.5).
+            </div>
+        </div>
+        
+
+        <div class="card bg-surface-card rounded-xl border border-border overflow-hidden shadow-md hover:border-primary transition">
+            <div class="p-3 bg-surface-elevated border-b border-border flex justify-between items-center">
+                <h4 class="font-semibold text-sm">Easy Score Distributions</h4>
+                <a href="score_distribution_socofing_altered_easy.png" target="_blank" class="text-xs text-primary hover:underline">View Full &rarr;</a>
+            </div>
+            <a href="score_distribution_socofing_altered_easy.png" target="_blank">
+                <img src="score_distribution_socofing_altered_easy.png" alt="Easy Score Distributions" class="w-full h-56 object-cover bg-black" loading="lazy" />
+            </a>
+            <div class="p-3 text-xs text-text-muted">
+                Genuine vs Impostor cosine similarity histograms.
+            </div>
+        </div>
+        
+
+        <div class="card bg-surface-card rounded-xl border border-border overflow-hidden shadow-md hover:border-primary transition">
+            <div class="p-3 bg-surface-elevated border-b border-border flex justify-between items-center">
+                <h4 class="font-semibold text-sm">Hard Score Distributions</h4>
+                <a href="score_distribution_socofing_altered_hard.png" target="_blank" class="text-xs text-primary hover:underline">View Full &rarr;</a>
+            </div>
+            <a href="score_distribution_socofing_altered_hard.png" target="_blank">
+                <img src="score_distribution_socofing_altered_hard.png" alt="Hard Score Distributions" class="w-full h-56 object-cover bg-black" loading="lazy" />
+            </a>
+            <div class="p-3 text-xs text-text-muted">
+                Genuine vs Impostor score separation under severe distortion.
+            </div>
+        </div>
+        
+            </div>
+        </section>
+
+        <!-- Live Interactive Sample Pair Inspector -->
+        <section class="bg-surface-card rounded-2xl border border-border p-5 shadow-lg space-y-4">
+            <div>
+                <h3 class="font-bold text-base text-white">Live Matching Verification Inspector</h3>
+                <p class="text-xs text-text-muted">Direct visual comparison of sample Genuine and Impostor matches using fixed-length cosine similarity</p>
+            </div>
+            <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
+                
+        <div class="card bg-surface-card p-4 rounded-xl border border-border shadow-md">
+            <div class="flex items-center justify-between mb-3">
+                <span class="text-sm font-semibold text-text-muted">Genuine Match (CR Alteration)</span>
+                <span class="badge badge-success">MATCH</span>
+            </div>
+            <div class="grid grid-cols-2 gap-4 items-center mb-4">
+                <div class="text-center">
+                    <img src="samples/genuine_CR_gallery.png" alt="Enrolled Gallery" class="w-24 h-28 object-contain mx-auto bg-black rounded-lg border border-border p-1" />
+                    <p class="text-xs text-text-muted mt-1">Enrolled Gallery</p>
+                </div>
+                <div class="text-center">
+                    <img src="samples/genuine_CR_probe.png" alt="Query Probe" class="w-24 h-28 object-contain mx-auto bg-black rounded-lg border border-border p-1" />
+                    <p class="text-xs text-text-muted mt-1">Query Probe (CR)</p>
+                </div>
+            </div>
+            <div class="bg-surface-elevated p-3 rounded-lg border border-border text-xs space-y-1">
+                <div class="flex justify-between">
+                    <span class="text-text-muted">Cosine Score:</span>
+                    <span class="font-bold text-success">0.8539</span>
+                </div>
+                <div class="flex justify-between">
+                    <span class="text-text-muted">Threshold (&tau;*):</span>
+                    <span>0.4500</span>
+                </div>
+                <div class="flex justify-between">
+                    <span class="text-text-muted">Status:</span>
+                    <span class="font-semibold">Genuine Comparison</span>
+                </div>
+            </div>
+        </div>
+        
+
+        <div class="card bg-surface-card p-4 rounded-xl border border-border shadow-md">
+            <div class="flex items-center justify-between mb-3">
+                <span class="text-sm font-semibold text-text-muted">Genuine Match (Obl Alteration)</span>
+                <span class="badge badge-success">MATCH</span>
+            </div>
+            <div class="grid grid-cols-2 gap-4 items-center mb-4">
+                <div class="text-center">
+                    <img src="samples/genuine_Obl_gallery.png" alt="Enrolled Gallery" class="w-24 h-28 object-contain mx-auto bg-black rounded-lg border border-border p-1" />
+                    <p class="text-xs text-text-muted mt-1">Enrolled Gallery</p>
+                </div>
+                <div class="text-center">
+                    <img src="samples/genuine_Obl_probe.png" alt="Query Probe" class="w-24 h-28 object-contain mx-auto bg-black rounded-lg border border-border p-1" />
+                    <p class="text-xs text-text-muted mt-1">Query Probe (Obl)</p>
+                </div>
+            </div>
+            <div class="bg-surface-elevated p-3 rounded-lg border border-border text-xs space-y-1">
+                <div class="flex justify-between">
+                    <span class="text-text-muted">Cosine Score:</span>
+                    <span class="font-bold text-success">0.7969</span>
+                </div>
+                <div class="flex justify-between">
+                    <span class="text-text-muted">Threshold (&tau;*):</span>
+                    <span>0.4500</span>
+                </div>
+                <div class="flex justify-between">
+                    <span class="text-text-muted">Status:</span>
+                    <span class="font-semibold">Genuine Comparison</span>
+                </div>
+            </div>
+        </div>
+        
+
+        <div class="card bg-surface-card p-4 rounded-xl border border-border shadow-md">
+            <div class="flex items-center justify-between mb-3">
+                <span class="text-sm font-semibold text-text-muted">Genuine Match (Zcut Alteration)</span>
+                <span class="badge badge-success">MATCH</span>
+            </div>
+            <div class="grid grid-cols-2 gap-4 items-center mb-4">
+                <div class="text-center">
+                    <img src="samples/genuine_Zcut_gallery.png" alt="Enrolled Gallery" class="w-24 h-28 object-contain mx-auto bg-black rounded-lg border border-border p-1" />
+                    <p class="text-xs text-text-muted mt-1">Enrolled Gallery</p>
+                </div>
+                <div class="text-center">
+                    <img src="samples/genuine_Zcut_probe.png" alt="Query Probe" class="w-24 h-28 object-contain mx-auto bg-black rounded-lg border border-border p-1" />
+                    <p class="text-xs text-text-muted mt-1">Query Probe (Zcut)</p>
+                </div>
+            </div>
+            <div class="bg-surface-elevated p-3 rounded-lg border border-border text-xs space-y-1">
+                <div class="flex justify-between">
+                    <span class="text-text-muted">Cosine Score:</span>
+                    <span class="font-bold text-success">0.9649</span>
+                </div>
+                <div class="flex justify-between">
+                    <span class="text-text-muted">Threshold (&tau;*):</span>
+                    <span>0.4500</span>
+                </div>
+                <div class="flex justify-between">
+                    <span class="text-text-muted">Status:</span>
+                    <span class="font-semibold">Genuine Comparison</span>
+                </div>
+            </div>
+        </div>
+        
+
+        <div class="card bg-surface-card p-4 rounded-xl border border-border shadow-md">
+            <div class="flex items-center justify-between mb-3">
+                <span class="text-sm font-semibold text-text-muted">Impostor Non-Match (Different Subjects)</span>
+                <span class="badge badge-danger">FALSE MATCH</span>
+            </div>
+            <div class="grid grid-cols-2 gap-4 items-center mb-4">
+                <div class="text-center">
+                    <img src="samples/impostor_diff_subject_gallery.png" alt="Enrolled Gallery" class="w-24 h-28 object-contain mx-auto bg-black rounded-lg border border-border p-1" />
+                    <p class="text-xs text-text-muted mt-1">Enrolled Gallery</p>
+                </div>
+                <div class="text-center">
+                    <img src="samples/impostor_diff_subject_probe.png" alt="Query Probe" class="w-24 h-28 object-contain mx-auto bg-black rounded-lg border border-border p-1" />
+                    <p class="text-xs text-text-muted mt-1">Query Probe (CR)</p>
+                </div>
+            </div>
+            <div class="bg-surface-elevated p-3 rounded-lg border border-border text-xs space-y-1">
+                <div class="flex justify-between">
+                    <span class="text-text-muted">Cosine Score:</span>
+                    <span class="font-bold text-danger">0.5747</span>
+                </div>
+                <div class="flex justify-between">
+                    <span class="text-text-muted">Threshold (&tau;*):</span>
+                    <span>0.4500</span>
+                </div>
+                <div class="flex justify-between">
+                    <span class="text-text-muted">Status:</span>
+                    <span class="font-semibold">Impostor Comparison</span>
+                </div>
+            </div>
+        </div>
+        
+            </div>
+        </section>
+
+        <!-- System Architecture & Methodological Notes -->
+        <section class="bg-surface-card rounded-2xl border border-border p-6 shadow-lg space-y-4 text-xs text-text-muted leading-relaxed">
+            <h3 class="font-bold text-sm text-white uppercase tracking-wider">Methodology & Architecture Overview</h3>
+            <div class="grid grid-cols-1 md:grid-cols-3 gap-6">
+                <div>
+                    <h4 class="font-bold text-slate-200 mb-1">1. Fixed-Length Embedding Advantage</h4>
+                    <p>Conventional minutiae matchers perform \(O(n^3)\) or \(O(n^2)\) point-set graph alignment. DeepPrint projects the entire fingerprint into a 192-dimensional unit-norm vector (\(\mathbb{S}^{191}\)). Comparison is reduced to a single vector dot product \(s = R_p^T R_g\) executed in under 0.5 microseconds.</p>
+                </div>
+                <div>
+                    <h4 class="font-bold text-slate-200 mb-1">2. Zero Data Leakage (Open-Set)</h4>
+                    <p>Evaluation enforces strict subject isolation. Fingerprints from test subjects were never encountered during backbone warmup or fine-tuning stages. Pristine Real impressions serve as the enrolled Gallery; distorted/altered impressions serve as unseen Probes.</p>
+                </div>
+                <div>
+                    <h4 class="font-bold text-slate-200 mb-1">3. CLAHE Preprocessing</h4>
+                    <p>Contrast Limited Adaptive Histogram Equalization (CLAHE) normalizes non-uniform illumination and skin dryness artifacts. Enhanced single-channel ridges are duplicated into 3 channels to maintain full compatibility with ImageNet pretrained CNN filters.</p>
+                </div>
+            </div>
+        </section>
+
+    </main>
+
+    <footer class="mt-12 text-center text-xs text-text-muted border-t border-border pt-6">
+        DeepPrint Replication & Evaluation Suite &bull; IEEE TPAMI 2021 Reference Architecture &bull; Local Automated Dashboard
+    </footer>
+
+</body>
+</html>
