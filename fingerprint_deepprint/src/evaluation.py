@@ -13,6 +13,8 @@ Implements all metrics reported in the DeepPrint research paper:
 import os
 from typing import Dict, List, Tuple
 import numpy as np
+import matplotlib
+matplotlib.use('Agg')
 import matplotlib.pyplot as plt
 from scipy.interpolate import interp1d
 from scipy.optimize import brentq
@@ -265,4 +267,154 @@ class Evaluator:
         plt.savefig(save_path, dpi=300)
         plt.close()
         print(f"CMC curve plot saved to: {save_path}")
+
+    def plot_comparison_roc(
+        self,
+        roc_dict_all: Dict[str, Dict],
+        filename: str = "comparison_roc.png"
+    ):
+        """
+        Plots overlaid semi-log ROC curves comparing multiple datasets/conditions.
+        """
+        plt.figure(figsize=(9, 6))
+        colors = ['#1f77b4', '#ff7f0e', '#2ca02c', '#d62728', '#9467bd', '#8c564b']
+        styles = ['-', '--', '-.', ':', '-', '--']
+
+        for idx, (name, data) in enumerate(roc_dict_all.items()):
+            c = colors[idx % len(colors)]
+            ls = styles[idx % len(styles)]
+            tar_01 = data.get("tar_01", 0.0) * 100.0
+            label = f"{name} (TAR@0.1%FAR: {tar_01:.1f}%)"
+            plt.plot(data["far"], data["tar"] * 100.0, color=c, linestyle=ls, lw=2.2, label=label)
+
+        plt.xscale("log")
+        plt.xlim([1e-4, 1.0])
+        plt.ylim([0, 105])
+        plt.xlabel("False Accept Rate (FAR)", fontsize=11, fontweight="bold")
+        plt.ylabel("True Accept Rate (%)", fontsize=11, fontweight="bold")
+        plt.title("DeepPrint Verification ROC Comparison Across Benchmarks", fontsize=12, fontweight="bold")
+        plt.grid(True, which="both", linestyle="--", alpha=0.5)
+        plt.legend(loc="lower right", fontsize=9, framealpha=0.9)
+
+        save_path = os.path.join(self.results_dir, filename)
+        plt.tight_layout()
+        plt.savefig(save_path, dpi=300)
+        plt.close()
+        print(f"Comparison ROC plot saved to: {save_path}")
+
+    def plot_comparison_cmc(
+        self,
+        cmc_dict_all: Dict[str, np.ndarray],
+        max_rank: int = 20,
+        filename: str = "comparison_cmc.png"
+    ):
+        """
+        Plots overlaid Cumulative Match Characteristic (CMC) curves for multiple datasets.
+        """
+        plt.figure(figsize=(9, 6))
+        colors = ['#1f77b4', '#ff7f0e', '#2ca02c', '#d62728', '#9467bd', '#8c564b']
+        markers = ['o', 's', '^', 'D', 'v', 'p']
+
+        ranks = np.arange(1, max_rank + 1)
+        for idx, (name, curve) in enumerate(cmc_dict_all.items()):
+            c = colors[idx % len(colors)]
+            m = markers[idx % len(markers)]
+            sub_curve = curve[:max_rank]
+            label = f"{name} (Rank-1: {sub_curve[0]:.1f}%)"
+            plt.plot(ranks, sub_curve, marker=m, markersize=4, color=c, lw=2.0, label=label)
+
+        plt.xlabel("Rank (k)", fontsize=11, fontweight="bold")
+        plt.ylabel("Identification Rate (%)", fontsize=11, fontweight="bold")
+        plt.title("DeepPrint Identification CMC Comparison Across Benchmarks", fontsize=12, fontweight="bold")
+        plt.ylim([0, 105])
+        plt.xticks(ranks[::2])
+        plt.grid(True, linestyle="--", alpha=0.5)
+        plt.legend(loc="lower right", fontsize=9, framealpha=0.9)
+
+        save_path = os.path.join(self.results_dir, filename)
+        plt.tight_layout()
+        plt.savefig(save_path, dpi=300)
+        plt.close()
+        print(f"Comparison CMC plot saved to: {save_path}")
+
+    def plot_alteration_bar_chart(
+        self,
+        alt_metrics: Dict[str, Dict],
+        filename: str = "alteration_type_analysis.png"
+    ):
+        """
+        Plots a grouped bar chart comparing Rank-1 and TAR@FAR=0.1% across alteration types.
+        """
+        types = list(alt_metrics.keys())
+        rank1_vals = [alt_metrics[t]["rank_1"] for t in types]
+        tar01_vals = [alt_metrics[t]["tar_01"] * 100.0 for t in types]
+
+        x = np.arange(len(types))
+        width = 0.35
+
+        fig, ax = plt.subplots(figsize=(8, 5))
+        rects1 = ax.bar(x - width/2, rank1_vals, width, label='Rank-1 Accuracy (%)', color='#2b5c8f')
+        rects2 = ax.bar(x + width/2, tar01_vals, width, label='TAR @ FAR=0.1% (%)', color='#e26d5c')
+
+        ax.set_ylabel('Performance (%)', fontsize=11, fontweight='bold')
+        ax.set_title('Robustness by Alteration Category (DeepPrint ResNet-50)', fontsize=12, fontweight='bold')
+        ax.set_xticks(x)
+        ax.set_xticklabels(types, fontsize=10)
+        ax.set_ylim([0, 115])
+        ax.legend(loc='upper right')
+        ax.grid(axis='y', linestyle='--', alpha=0.5)
+
+        for rect in rects1:
+            h = rect.get_height()
+            ax.annotate(f'{h:.1f}%', xy=(rect.get_x() + rect.get_width() / 2, h),
+                        xytext=(0, 3), textcoords="offset points", ha='center', va='bottom', fontsize=9)
+        for rect in rects2:
+            h = rect.get_height()
+            ax.annotate(f'{h:.1f}%', xy=(rect.get_x() + rect.get_width() / 2, h),
+                        xytext=(0, 3), textcoords="offset points", ha='center', va='bottom', fontsize=9)
+
+        save_path = os.path.join(self.results_dir, filename)
+        plt.tight_layout()
+        plt.savefig(save_path, dpi=300)
+        plt.close()
+        print(f"Alteration bar chart saved to: {save_path}")
+
+    def plot_compression_fidelity(
+        self,
+        original_embs: np.ndarray,
+        decompressed_embs: np.ndarray,
+        filename: str = "compression_fidelity.png"
+    ):
+        """
+        Plots reconstruction analysis comparing original 768-byte float32 vectors
+        vs 200-byte min-max quantized vectors.
+        """
+        fig, axes = plt.subplots(1, 2, figsize=(12, 5))
+
+        # Absolute error distribution
+        abs_err = np.abs(original_embs - decompressed_embs).flatten()
+        axes[0].hist(abs_err, bins=60, color='#38b000', alpha=0.75, edgecolor='black', lw=0.5)
+        axes[0].set_xlabel("Absolute Value Difference (|R - R_decomp|)", fontsize=10)
+        axes[0].set_ylabel("Frequency", fontsize=10)
+        axes[0].set_title(f"Reconstruction Error Distribution (MAE: {np.mean(abs_err):.6f})", fontsize=11, fontweight="bold")
+        axes[0].grid(True, linestyle="--", alpha=0.5)
+
+        # Correlation scatter plot for sample embedding
+        sample_orig = original_embs[0]
+        sample_decomp = decompressed_embs[0]
+        axes[1].scatter(sample_orig, sample_decomp, color='#0077b6', alpha=0.6, s=20)
+        min_v, max_v = min(sample_orig), max(sample_orig)
+        axes[1].plot([min_v, max_v], [min_v, max_v], 'r--', lw=1.5, label='Ideal Identity (y = x)')
+        axes[1].set_xlabel("Original Float32 Representation (768 Bytes)", fontsize=10)
+        axes[1].set_ylabel("Decompressed Representation (200 Bytes)", fontsize=10)
+        corr = np.dot(sample_orig, sample_decomp)
+        axes[1].set_title(f"200-Byte Template Fidelity (Cosine Corr: {corr:.6f})", fontsize=11, fontweight="bold")
+        axes[1].legend(loc="upper left")
+        axes[1].grid(True, linestyle="--", alpha=0.5)
+
+        save_path = os.path.join(self.results_dir, filename)
+        plt.tight_layout()
+        plt.savefig(save_path, dpi=300)
+        plt.close()
+        print(f"Compression fidelity plot saved to: {save_path}")
 
