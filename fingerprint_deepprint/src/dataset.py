@@ -11,6 +11,7 @@ import glob
 from typing import Dict, List, Tuple, Optional
 import torch
 from torch.utils.data import Dataset, DataLoader
+from torchvision import transforms
 from PIL import Image
 
 from .preprocessing import FingerprintPreprocessor
